@@ -77,3 +77,4 @@ arbitrary = [
     "dep:proptest",
     "dep:proptest-derive",
 ]
+optimism = []

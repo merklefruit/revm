@@ -50,6 +50,7 @@ optional_gas_refund = ["revm-interpreter/optional_gas_refund"]
 std = ["revm-interpreter/std"]
 ethersdb = ["tokio", "futures", "ethers-providers", "ethers-core"]
 serde = ["dep:serde", "revm-interpreter/serde"]
+optimism = []
 # deprecated feature
 web3db = []
 with-serde = []

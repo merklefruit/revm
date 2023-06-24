@@ -45,6 +45,9 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
         let gas_limit = self.data.env.tx.gas_limit;
         let effective_gas_price = self.data.env.effective_gas_price();
 
+        let is_deposit = self.data.env.tx.is_deposit_tx;
+        let is_system_tx = self.data.env.tx.is_system_tx;
+
         if GSPEC::enabled(MERGE) && self.data.env.block.prevrandao.is_none() {
             return Err(EVMError::PrevrandaoNotSet);
         }
@@ -89,7 +92,7 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
         let disable_eip3607 = false;
 
         // EIP-3607: Reject transactions from senders with deployed code
-        // This EIP is introduced after london but there was no colision in past
+        // This EIP is introduced after london but there was no collision in past
         // so we can leave it enabled always
         if !disable_eip3607
             && self.data.journaled_state.account(caller).info.code_hash != KECCAK_EMPTY
@@ -121,6 +124,12 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
         // Transfer will be done inside `*_inner` functions.
         if payment_value + value > *caller_balance && !disable_balance_check {
             return Err(InvalidTransaction::LackOfFundForGasLimit.into());
+        }
+
+        #[cfg(feature = "optimism")]
+        if let Some(minted) = self.data.env.tx.mint {
+            // Add minted amount to caller balance
+            *caller_balance = caller_balance.saturating_add(minted);
         }
 
         // Reduce gas_limit*gas_price amount of caller account.
@@ -226,6 +235,16 @@ impl<'a, GSPEC: Spec, DB: Database, const INSPECT: bool> Transact<DB::Error>
                 panic!("Internal return flags should remain internal {exit_reason:?}")
             }
         };
+
+        // TODO: if deposit failed, update the sender nonce anyway
+        // and set the gas used to the gas limit
+        if is_deposit && !result.is_success() {
+            // if the fail reason is not that the block ran out of gas. Otherwise,
+            // don't count the deposit as executed.
+            // The problem is that this check can only be done in the
+            // external function that executes the block in op-reth, not here.
+            self.data.journaled_state.inc_nonce(caller);
+        }
 
         Ok(ResultAndState { result, state })
     }

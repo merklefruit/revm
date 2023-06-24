@@ -42,6 +42,13 @@ pub struct TxEnv {
     pub chain_id: Option<u64>,
     pub nonce: Option<u64>,
     pub access_list: Vec<(B160, Vec<U256>)>,
+
+    #[cfg(feature = "optimism")]
+    pub mint: Option<U256>,
+    #[cfg(feature = "optimism")]
+    pub is_deposit_tx: bool,
+    #[cfg(feature = "optimism")]
+    pub is_system_tx: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -172,6 +179,13 @@ impl Default for TxEnv {
             chain_id: None,
             nonce: None,
             access_list: Vec::new(),
+
+            #[cfg(feature = "optimism")]
+            mint: None,
+            #[cfg(feature = "optimism")]
+            is_deposit_tx: false,
+            #[cfg(feature = "optimism")]
+            is_system_tx: false,
         }
     }
 }
